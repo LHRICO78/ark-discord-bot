@@ -1,0 +1,75 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2025-10-23T08:00:00+00:00",
+    "name": "ARK Discord Bot",
+    "author": "contact@manus.ai",
+    "description": "Bot Discord pour gérer un serveur ARK: Survival Evolved via une API REST sécurisée. Nécessite que le serveur API soit installé sur le serveur ARK avec arkmanager.",
+    "features": null,
+    "docker_images": {
+        "ghcr.io/parkervcp/yolks:python_3.11": "ghcr.io/parkervcp/yolks:python_3.11",
+        "ghcr.io/parkervcp/yolks:python_3.10": "ghcr.io/parkervcp/yolks:python_3.10",
+        "ghcr.io/parkervcp/yolks:python_3.9": "ghcr.io/parkervcp/yolks:python_3.9"
+    },
+    "file_denylist": [],
+    "startup": "if [[ -d .git ]] && [[ {{AUTO_UPDATE}} == \"1\" ]]; then git pull; fi; if [[ ! -f .env ]]; then echo \"ERREUR: Fichier .env manquant! Copiez .env.example vers .env et configurez-le.\"; exit 1; fi; /usr/local/bin/python discord_bot.py",
+    "config": {
+        "files": "{\r\n    \".env\": {\r\n        \"parser\": \"properties\",\r\n        \"find\": {\r\n            \"DISCORD_BOT_TOKEN\": \"DISCORD_BOT_TOKEN={{server.build.env.DISCORD_BOT_TOKEN}}\",\r\n            \"ARK_API_URL\": \"ARK_API_URL={{server.build.env.ARK_API_URL}}\",\r\n            \"ARK_API_TOKEN\": \"ARK_API_TOKEN={{server.build.env.ARK_API_TOKEN}}\"\r\n        }\r\n    }\r\n}",
+        "startup": "{\r\n    \"done\": \"Bot connecté en tant que\"\r\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\n\n# Installation Script\nset -e\n\ncd /mnt/server\n\n# Installer git si nécessaire\nif ! command -v git &> /dev/null; then\n    echo \"Installation de git...\"\n    apt update\n    apt install -y git\nfi\n\n# Cloner le dépôt\nif [ -d \"ark-discord-bot\" ]; then\n    echo \"Le dépôt existe déjà, mise à jour...\"\n    cd ark-discord-bot\n    git pull\nelse\n    echo \"Clonage du dépôt ARK Discord Bot...\"\n    git clone https://github.com/LHRICO78/ark-discord-bot.git\n    cd ark-discord-bot\nfi\n\n# Se placer dans le dossier bot\ncd bot\n\n# Copier les fichiers au niveau racine du serveur\necho \"Copie des fichiers...\"\ncp discord_bot.py /mnt/server/\ncp requirements.txt /mnt/server/\ncp .env.example /mnt/server/\n\n# Retour au dossier racine\ncd /mnt/server\n\n# Installer les dépendances Python\necho \"Installation des dépendances Python...\"\nif [ -f requirements.txt ]; then\n    pip install --no-cache-dir --upgrade pip\n    pip install --no-cache-dir -r requirements.txt\nfi\n\n# Créer le fichier .env s'il n'existe pas\nif [ ! -f .env ]; then\n    echo \"Création du fichier .env...\"\n    cp .env.example .env\n    echo \"\"\n    echo \"========================================\"\n    echo \"IMPORTANT: Configurez le fichier .env !\"\n    echo \"========================================\"\n    echo \"Allez dans l'onglet 'Files' et éditez le fichier .env\"\n    echo \"Remplissez les variables:\"\n    echo \"  - DISCORD_BOT_TOKEN\"\n    echo \"  - ARK_API_URL\"\n    echo \"  - ARK_API_TOKEN\"\n    echo \"========================================\"\nfi\n\necho \"Installation terminée!\"",
+            "container": "ghcr.io/parkervcp/installers:debian",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Discord Bot Token",
+            "description": "Le token de votre bot Discord. Obtenez-le sur https://discord.com/developers/applications",
+            "env_variable": "DISCORD_BOT_TOKEN",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "ARK API URL",
+            "description": "L'URL complète de votre serveur API ARK (ex: http://123.45.67.89:2603)",
+            "env_variable": "ARK_API_URL",
+            "default_value": "http://127.0.0.1:2603",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "ARK API Token",
+            "description": "Le token d'authentification de votre API ARK (doit être identique à celui du serveur API)",
+            "env_variable": "ARK_API_TOKEN",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Auto Update",
+            "description": "Mettre à jour automatiquement le bot au démarrage (1 = oui, 0 = non)",
+            "env_variable": "AUTO_UPDATE",
+            "default_value": "1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|boolean",
+            "field_type": "text"
+        }
+    ]
+}
+

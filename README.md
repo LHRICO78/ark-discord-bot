@@ -59,7 +59,19 @@ Le bot supporte les commandes suivantes :
 
 ## 📦 Installation
 
-### Étape 0 : Installer ARK Server Tools (si ce n'est pas déjà fait)
+### 🎮 Installation via Pterodactyl Panel
+
+Si vous utilisez Pterodactyl Panel pour héberger vos serveurs, consultez le guide dédié :
+
+👉 **[Installation Pterodactyl](pterodactyl/INSTALLATION_PTERODACTYL.md)**
+
+Deux fichiers egg sont fournis pour installer facilement le bot Discord et le serveur API.
+
+---
+
+### 💻 Installation Manuelle
+
+#### Étape 0 : Installer ARK Server Tools (si ce n'est pas déjà fait)
 
 **Sur votre serveur de jeu ARK**, installez ARK Server Tools en suivant la documentation officielle :
 
@@ -77,7 +89,7 @@ arkmanager status @main  # Remplacez 'main' par le nom de votre instance
 
 ---
 
-### Partie 1 : Installation du Serveur API (sur le serveur de jeu ARK)
+#### Partie 1 : Installation du Serveur API (sur le serveur de jeu ARK)
 
 **Prérequis :**
 
@@ -146,7 +158,7 @@ arkmanager status @main  # Remplacez 'main' par le nom de votre instance
 
 ---
 
-### Partie 2 : Installation du Bot Discord (sur n'importe quel serveur ou machine)
+#### Partie 2 : Installation du Bot Discord (sur n'importe quel serveur ou machine)
 
 **Prérequis :**
 
