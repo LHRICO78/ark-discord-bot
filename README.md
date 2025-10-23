@@ -65,7 +65,7 @@ Si vous utilisez Pterodactyl Panel pour héberger vos serveurs, consultez le gui
 
 👉 **[Installation Pterodactyl](pterodactyl/INSTALLATION_PTERODACTYL.md)**
 
-Deux fichiers egg sont fournis pour installer facilement le bot Discord et le serveur API.
+Un fichier egg est fourni pour installer facilement le bot Discord via Pterodactyl. Le serveur API s'installe manuellement sur la machine hôte.
 
 ---
 
