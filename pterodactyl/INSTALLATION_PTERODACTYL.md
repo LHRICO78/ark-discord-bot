@@ -1,6 +1,6 @@
 # Installation via Pterodactyl Panel
 
-Ce guide vous explique comment installer le bot Discord ARK et le serveur API en utilisant Pterodactyl Panel.
+Ce guide vous explique comment installer le bot Discord ARK en utilisant Pterodactyl Panel.
 
 ---
 
@@ -10,76 +10,148 @@ Ce guide vous explique comment installer le bot Discord ARK et le serveur API en
 
 Vous aurez besoin de :
 - Un panel Pterodactyl fonctionnel
-- Accès administrateur au panel
-- Un serveur ARK avec arkmanager installé
+- Un serveur ARK avec arkmanager installé **sur la machine hôte** (pas dans un conteneur)
+- Le serveur API ARK installé **sur la machine hôte** du serveur ARK
 - Un token de bot Discord
 
 ---
 
-## 🥚 Fichiers Egg Fournis
+## 🏗️ Architecture
 
-Deux fichiers egg sont fournis dans le dossier `pterodactyl/` :
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Machine Hôte (Serveur ARK)               │
+│                                                             │
+│  ┌──────────────┐      ┌─────────────────┐                │
+│  │   Serveur    │ ───> │   Serveur API   │                │
+│  │     ARK      │      │   (Port 2603)   │                │
+│  │ (arkmanager) │      │  Installation   │                │
+│  └──────────────┘      │    manuelle     │                │
+│                        └─────────────────┘                │
+│                               ▲                            │
+└───────────────────────────────┼────────────────────────────┘
+                                │
+                          HTTP REST API
+                                │
+                                ▼
+                   ┌────────────────────────┐
+                   │   Bot Discord          │
+                   │   (Pterodactyl Panel)  │
+                   │   Installation via egg │
+                   └────────────────────────┘
+```
 
-1. **`egg-ark-api-server.json`** : Serveur API (à installer sur le node où se trouve votre serveur ARK)
-2. **`egg-ark-discord-bot.json`** : Bot Discord (peut être installé sur n'importe quel node)
+---
+
+## 🥚 Fichier Egg Fourni
+
+Un seul fichier egg est fourni dans le dossier `pterodactyl/` :
+
+- **`egg-ark-discord-bot.json`** : Bot Discord (peut être installé sur n'importe quel node Pterodactyl)
 
 ---
 
 ## 📦 Installation
 
-### Étape 1 : Importer les Eggs dans Pterodactyl
+### Étape 1 : Installer le Serveur API sur la Machine Hôte
+
+**Le serveur API doit être installé directement sur la machine hôte** où se trouve votre serveur ARK et arkmanager. **Il ne doit PAS être dans un conteneur Pterodactyl.**
+
+**Sur la machine hôte de votre serveur ARK :**
+
+```bash
+# 1. Cloner le projet
+cd /home/steam  # ou le répertoire de votre choix
+git clone https://github.com/LHRICO78/ark-discord-bot.git
+cd ark-discord-bot/server
+
+# 2. Installer les dépendances Python
+pip3 install -r requirements.txt
+
+# 3. Configurer l'environnement
+cp .env.example .env
+nano .env
+```
+
+**Configurez le fichier `.env` :**
+
+```bash
+ARK_API_TOKEN=VotreTokenSecretTresLong123456789ABCDEF
+ARK_API_PORT=2603
+ARKMANAGER_PATH=/usr/local/bin/arkmanager
+```
+
+**Générez un token sécurisé** (minimum 32 caractères) :
+
+```bash
+# Exemple de génération de token
+openssl rand -base64 32
+```
+
+**Installez le service systemd** :
+
+```bash
+# Éditer le fichier de service pour adapter les chemins
+sudo nano ark-api.service
+
+# Copier le service
+sudo cp ark-api.service /etc/systemd/system/
+
+# Activer et démarrer
+sudo systemctl daemon-reload
+sudo systemctl enable ark-api.service
+sudo systemctl start ark-api.service
+
+# Vérifier le statut
+sudo systemctl status ark-api.service
+```
+
+**Ouvrir le port dans le pare-feu :**
+
+```bash
+sudo ufw allow 2603/tcp
+```
+
+**Notez le token API** affiché dans les logs au démarrage :
+
+```bash
+sudo journalctl -u ark-api.service -f
+```
+
+---
+
+### Étape 2 : Importer l'Egg dans Pterodactyl
 
 **En tant qu'administrateur du panel :**
 
 1. Connectez-vous à votre panel Pterodactyl
-2. Allez dans **Admin Area** → **Nests** → **Create New** (ou utilisez un nest existant)
-3. Créez un nouveau nest appelé "ARK Management" (ou utilisez un nest existant)
+2. Allez dans **Admin Area** → **Nests**
+3. Créez un nouveau nest appelé "Bots" (ou utilisez un nest existant)
 4. Dans le nest, cliquez sur **Import Egg**
-5. Importez les deux fichiers :
-   - `egg-ark-api-server.json`
-   - `egg-ark-discord-bot.json`
+5. Importez le fichier **`egg-ark-discord-bot.json`**
 
-### Étape 2 : Créer le Serveur API
+---
 
-**Important** : Le serveur API doit être créé sur le **même node** que votre serveur ARK, car il doit avoir accès à la commande `arkmanager`.
+### Étape 3 : Créer le Bot Discord dans Pterodactyl
 
-1. Créez un nouveau serveur dans Pterodactyl
-2. Sélectionnez l'egg **"ARK API Server"**
-3. Configurez les paramètres :
-   - **Nom** : ARK API Server
-   - **Node** : Le même node que votre serveur ARK
-   - **Allocation** : Choisissez le port 2603 (ou un autre port disponible)
-   - **Mémoire** : 512 MB minimum
-   - **CPU** : 50% minimum
-
-4. Dans les **variables d'environnement** :
-   - **ARK API Token** : Générez un token sécurisé (minimum 32 caractères)
-     - Exemple : `MonTokenSecretTresLong123456789ABCDEF`
-   - **ARKManager Path** : `/usr/local/bin/arkmanager` (ou le chemin où arkmanager est installé)
-   - **Auto Update** : `1` (pour activer les mises à jour automatiques)
-
-5. Démarrez le serveur
-6. **Notez le token API** affiché dans la console au démarrage
-
-### Étape 3 : Créer le Bot Discord
-
-**Le bot Discord peut être installé sur n'importe quel node.**
+**Le bot Discord peut être installé sur n'importe quel node Pterodactyl.**
 
 1. Créez un nouveau serveur dans Pterodactyl
 2. Sélectionnez l'egg **"ARK Discord Bot"**
 3. Configurez les paramètres :
    - **Nom** : ARK Discord Bot
    - **Node** : N'importe quel node
-   - **Allocation** : Aucun port externe nécessaire
+   - **Allocation** : Aucun port externe nécessaire (laissez par défaut)
    - **Mémoire** : 256 MB minimum
    - **CPU** : 50% minimum
+   - **Stockage** : 200 MB minimum
 
 4. Dans les **variables d'environnement** :
    - **Discord Bot Token** : Votre token de bot Discord (voir section suivante)
-   - **ARK API URL** : `http://IP_DU_SERVEUR_API:2603`
-     - Remplacez `IP_DU_SERVEUR_API` par l'IP du node où tourne le serveur API
-     - Utilisez le port que vous avez configuré pour le serveur API
-   - **ARK API Token** : Le **même token** que celui du serveur API
+   - **ARK API URL** : `http://IP_MACHINE_HOTE:2603`
+     - Remplacez `IP_MACHINE_HOTE` par l'IP de la machine hôte où tourne le serveur API
+     - **Important** : Utilisez l'IP de la machine hôte, pas l'IP du conteneur Pterodactyl
+   - **ARK API Token** : Le **même token** que celui configuré dans le serveur API
    - **Auto Update** : `1` (pour activer les mises à jour automatiques)
 
 5. Démarrez le serveur
@@ -103,51 +175,41 @@ Si vous n'avez pas encore de bot Discord :
 
 ---
 
-## 🔧 Configuration Avancée
+## 🔧 Configuration Réseau
 
-### Accès à arkmanager depuis le conteneur Pterodactyl
+### Trouver l'IP de la Machine Hôte
 
-**Important** : Le serveur API doit pouvoir exécuter la commande `arkmanager`. Si arkmanager est installé sur l'hôte et non dans le conteneur, vous devrez :
+Le bot Discord (dans Pterodactyl) doit pouvoir communiquer avec le serveur API (sur la machine hôte).
 
-**Option 1 : Monter arkmanager dans le conteneur**
-
-Ajoutez un mount dans la configuration du node Pterodactyl :
-
-```json
-{
-  "source": "/usr/local/bin/arkmanager",
-  "target": "/usr/local/bin/arkmanager",
-  "read_only": true
-}
-```
-
-**Option 2 : Installer arkmanager dans le conteneur**
-
-Modifiez le script d'installation de l'egg pour installer arkmanager :
+**Sur la machine hôte, trouvez l'IP :**
 
 ```bash
-# Dans le script d'installation
-curl -sL https://raw.githubusercontent.com/arkmanager/ark-server-tools/master/netinstall.sh | bash -s steam
+# IP locale
+ip addr show
+
+# Ou
+hostname -I
 ```
 
-**Option 3 : Utiliser un wrapper SSH**
+**Utilisez cette IP dans `ARK_API_URL`** :
+- Si le bot est sur le **même serveur physique** : Utilisez l'IP locale (ex: `192.168.1.100`)
+- Si le bot est sur un **serveur distant** : Utilisez l'IP publique et ouvrez le port 2603 dans le pare-feu
 
-Si arkmanager est sur une autre machine, vous pouvez créer un wrapper qui exécute les commandes via SSH.
+### Sécurité Réseau
 
-### Sécurité
-
-Pour renforcer la sécurité, configurez le pare-feu du serveur API pour n'accepter que les connexions depuis l'IP du bot Discord :
+Pour renforcer la sécurité, limitez l'accès au port 2603 uniquement depuis l'IP du serveur Pterodactyl :
 
 ```bash
-# Sur l'hôte du serveur API
-sudo ufw allow from IP_DU_BOT to any port 2603 proto tcp
+# Sur la machine hôte du serveur ARK
+sudo ufw delete allow 2603/tcp
+sudo ufw allow from IP_DU_PTERODACTYL to any port 2603 proto tcp
 ```
 
 ---
 
 ## 🎮 Utilisation
 
-Une fois les deux serveurs démarrés, testez le bot sur Discord :
+Une fois le serveur API et le bot démarrés, testez le bot sur Discord :
 
 ```
 !ark help
@@ -161,35 +223,50 @@ Remplacez `main` par le nom de votre instance ARK.
 
 ## 🐛 Dépannage
 
-### Le serveur API ne démarre pas
-
-- Vérifiez que le fichier `.env` existe et est correctement configuré
-- Vérifiez les logs du serveur dans la console Pterodactyl
-- Assurez-vous que `ARKMANAGER_PATH` pointe vers le bon exécutable
-
 ### Le bot ne peut pas se connecter au serveur API
 
-- Vérifiez que `ARK_API_URL` contient la bonne IP et le bon port
-- Vérifiez que `ARK_API_TOKEN` est identique dans les deux serveurs
-- Testez la connexion manuellement :
-  ```bash
-  curl -H "Authorization: Bearer VotreToken" http://IP:2603/health
-  ```
+**Erreur** : `Impossible de se connecter au serveur ARK`
+
+**Solutions** :
+
+1. Vérifiez que le serveur API est démarré :
+   ```bash
+   sudo systemctl status ark-api.service
+   ```
+
+2. Testez la connexion depuis le conteneur Pterodactyl :
+   ```bash
+   # Dans la console du bot Pterodactyl
+   curl http://IP_MACHINE_HOTE:2603/health
+   ```
+
+3. Vérifiez que l'IP dans `ARK_API_URL` est correcte (IP de la machine hôte, pas du conteneur)
+
+4. Vérifiez que le port 2603 est ouvert :
+   ```bash
+   sudo ufw status
+   ```
+
+5. Vérifiez que `ARK_API_TOKEN` est identique dans les deux configurations
 
 ### Les commandes arkmanager ne fonctionnent pas
 
-- Vérifiez que arkmanager est accessible depuis le conteneur
-- Testez manuellement dans la console du serveur API :
-  ```bash
-  /usr/local/bin/arkmanager status @main
-  ```
-- Vérifiez les permissions d'exécution
+**Erreur** : `arkmanager: command not found`
+
+**Solution** : Vérifiez que `ARKMANAGER_PATH` dans le fichier `.env` du serveur API pointe vers le bon exécutable :
+
+```bash
+# Sur la machine hôte
+which arkmanager
+```
 
 ### Le bot ne répond pas sur Discord
 
-- Vérifiez que `DISCORD_BOT_TOKEN` est correct
-- Vérifiez que "MESSAGE CONTENT INTENT" est activé dans les paramètres du bot Discord
-- Vérifiez les logs du bot dans la console Pterodactyl
+**Solutions** :
+
+1. Vérifiez que `DISCORD_BOT_TOKEN` est correct
+2. Vérifiez que "MESSAGE CONTENT INTENT" est activé dans les paramètres du bot Discord
+3. Consultez les logs du bot dans la console Pterodactyl
 
 ---
 
@@ -203,19 +280,15 @@ Remplacez `main` par le nom de votre instance ARK.
 
 ---
 
-## 💡 Conseils
+## 💡 Points Importants
 
-- **Mises à jour automatiques** : Laissez `AUTO_UPDATE=1` pour que les serveurs se mettent à jour automatiquement depuis GitHub
-- **Logs** : Consultez régulièrement les logs dans la console Pterodactyl pour détecter les problèmes
-- **Sauvegarde** : Sauvegardez régulièrement votre configuration (fichier `.env`)
-- **Token sécurisé** : Utilisez un générateur de mots de passe pour créer un `ARK_API_TOKEN` fort
+✅ **Le serveur API est installé sur la machine hôte** (pas dans Pterodactyl)
 
----
+✅ **Le bot Discord est installé via Pterodactyl** (avec l'egg fourni)
 
-## ⚠️ Notes Importantes
+✅ **Pas de SSH nécessaire** : Communication via API REST HTTP
 
-1. Le serveur API **doit** avoir accès à `arkmanager`
-2. Le `ARK_API_TOKEN` **doit** être identique dans les deux serveurs
-3. Le serveur API **doit** être accessible depuis le bot Discord (vérifiez les pare-feu)
-4. Le bot Discord nécessite l'intent "MESSAGE CONTENT" activé
+✅ **Le token API doit être identique** dans le serveur API et le bot Discord
+
+✅ **Utilisez l'IP de la machine hôte** dans `ARK_API_URL`, pas l'IP du conteneur
 
