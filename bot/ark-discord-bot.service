@@ -1,0 +1,16 @@
+[Unit]
+Description=ARK Discord Bot
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ark-discord-bot
+EnvironmentFile=/home/ubuntu/ark-discord-bot/.env
+ExecStart=/usr/bin/python3 /home/ubuntu/ark-discord-bot/discord_bot.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
